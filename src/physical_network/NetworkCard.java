@@ -63,6 +63,34 @@ public class NetworkCard extends Thread {
      * @param frame  Data frame to send across the network.
      */
     public void send(DataFrame frame) throws InterruptedException {
+    	System.out.println(frame.getPayload());
+    	
+    	for (byte b : frame.getPayload())
+    	{
+    		//System.out.println("First for loop");
+    		
+    		String str = String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0');
+    		
+    		System.out.println("[*] " + str);
+    		
+    		for(char c : str.toCharArray())
+    		{
+    			//System.out.println("Second for loop");
+    			if (c == '1')
+    			{
+    				System.out.println("Set High");
+    				wire.setVoltage(deviceName, HIGH_VOLTAGE);
+    				sleep(1000);
+    			}
+    			else
+    			{
+    				System.out.println("Set Low");
+    				wire.setVoltage(deviceName, LOW_VOLTAGE);
+    				sleep(1000);
+    			}
+    		}
+    		
+    	}
     	
     }
 
@@ -73,6 +101,7 @@ public class NetworkCard extends Thread {
 			
 			System.out.println("WAITING TO RECEIVE DATA FRAMES");
 			
+			//listener.receive(new DataFrame("Hello"));
 		}
 		
 	}
