@@ -4,7 +4,7 @@
 
 package physical_network;
 
-//import java.util.Hashtable;
+import java.util.Hashtable;
 
 /**
  * 
@@ -28,25 +28,24 @@ package physical_network;
  */
 class MyTwistedWirePair implements TwistedWirePair {
 	
-	private double voltage = 0;
-	
-	//Hashtable<String, Double> voltages = new Hashtable<String, Double>();
+	// Hash table for storing voltages for different devices.
+	Hashtable<String, Double> voltages = new Hashtable<String, Double>();
 	
     public synchronized void setVoltage(String device, double voltage) {
-    	//voltages.put(device, voltage);
-    	this.voltage = voltage;
+    	
+    	voltages.put(device, voltage);
+ 
     }
-        
+      
     public synchronized double getVoltage(String device) {
-    	/*
-    	double voltage_test = 0;
+    	
+    	double voltage = 0;
+    	
+    	// Sum all the voltage values in the hash table.
     	for (Double value : voltages.values()) {
-    	    voltage_test += value;;
+    	    voltage += value;
     	}
     	
-    	return voltage_test;
-    	*/
-    	
-    	return this.voltage;
+    	return voltage;
     }
 }

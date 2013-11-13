@@ -38,7 +38,7 @@ public class NetworkCard extends Thread {
     private final int PULSE_WIDTH = 200;
     
     // Default value for maximum payload size in bytes.
-    private final int MAX_PAYLOAD_SIZE = 1500;
+    //private final int MAX_PAYLOAD_SIZE = 1500;
 
     
     /**
@@ -63,30 +63,27 @@ public class NetworkCard extends Thread {
      * @param frame  Data frame to send across the network.
      */
     public void send(DataFrame frame) throws InterruptedException {
-    	System.out.println(frame.getPayload());
     	
     	for (byte b : frame.getPayload())
-    	{
-    		//System.out.println("First for loop");
+    	{	
+    		// Convert byte type to 8 bit binary string.
+    		String binary_str = String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0');
     		
-    		String str = String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0');
+    		// Print out binary string (for checking).
+    		System.out.println("[*] " + binary_str);
     		
-    		System.out.println("[*] " + str);
-    		
-    		for(char c : str.toCharArray())
+    		// Iterate through binary string to set the voltage high/low accordingly.
+    		for(char bit : binary_str.toCharArray())
     		{
-    			//System.out.println("Second for loop");
-    			if (c == '1')
+    			if (bit == '1')
     			{
-    				System.out.println("Set High");
     				wire.setVoltage(deviceName, HIGH_VOLTAGE);
-    				sleep(1000);
+    				sleep(PULSE_WIDTH);
     			}
     			else
     			{
-    				System.out.println("Set Low");
     				wire.setVoltage(deviceName, LOW_VOLTAGE);
-    				sleep(1000);
+    				sleep(PULSE_WIDTH);
     			}
     		}
     		
@@ -100,8 +97,7 @@ public class NetworkCard extends Thread {
 		if (listener != null) {
 			
 			System.out.println("WAITING TO RECEIVE DATA FRAMES");
-			
-			//listener.receive(new DataFrame("Hello"));
+		
 		}
 		
 	}
