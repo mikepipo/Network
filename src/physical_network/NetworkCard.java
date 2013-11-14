@@ -4,6 +4,8 @@
 
 package physical_network;
 
+import javax.xml.bind.DatatypeConverter;
+
 
 /**
  * 
@@ -89,14 +91,73 @@ public class NetworkCard extends Thread {
     		
     	}
     	
+    	wire.setVoltage(deviceName, 0.0);
+    	
+    }
+    
+    public static String toHexString(byte[] array) 
+    {
+        return DatatypeConverter.printHexBinary(array);
     }
 
-
+    public static byte[] toByteArray(String s) 
+    {
+        return DatatypeConverter.parseHexBinary(s);
+    }
+    
 	public void run() {
 		
 		if (listener != null) {
 			
 			System.out.println("WAITING TO RECEIVE DATA FRAMES");
+					        		
+			
+			String data = new String();
+			
+			try {
+	        	
+	        	while (true) {
+	        		
+	                int count = 0;
+	                String byte_data = new String();
+	                
+	                while (count < 8)
+	                {
+	                	double voltage = wire.getVoltage(deviceName);                
+	                	//System.out.println(voltage);
+	                	
+		                if (voltage < -2.0)
+		                {
+		                	//System.out.println("0");
+		                	byte_data += '0';
+		                	count++;
+		                }
+		                if (voltage > 2.0)
+		                {
+		                	//System.out.println("1");
+		                	byte_data += '1';
+		                	count++;
+		                }
+		                
+		                sleep(200);
+		                
+	                }
+	                
+	                data += byte_data;
+	                
+	                System.out.println(Integer.toHexString(Integer.parseInt(byte_data, 2)));
+	                
+	                DataFrame recieved_dataframe = new DataFrame(toByteArray(data));
+	                
+	                listener.receive(recieved_dataframe);
+	            }
+	        	
+
+	        } catch (InterruptedException except) {
+	            System.out.println("Netword Card Interrupted: " + getName());
+	        }
+			
+			
 		
 		}
 		
