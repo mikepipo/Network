@@ -31,6 +31,8 @@ class MyTwistedWirePair implements TwistedWirePair {
 	// Hash table for storing voltages for different devices.
 	Hashtable<String, Double> voltages = new Hashtable<String, Double>();
 	
+	// setVoltage and getVoltage not atomic, so synchronize them.
+	
     public synchronized void setVoltage(String device, double voltage) {
     	
     	voltages.put(device, voltage);
