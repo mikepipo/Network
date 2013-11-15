@@ -96,7 +96,7 @@ public class NetworkCard extends Thread {
     /**
     * Takes a character (bit) from the binary string and sets the voltage on the wire to high/low accordingly.
     * 
-    * @param bit  A character (bit) from a binary string.
+    * @param bit  A character (bit) from a binary string (i.e. either "0" or "1").
     */
     private void sendBit(char bit) throws InterruptedException
     {
@@ -147,7 +147,6 @@ public class NetworkCard extends Thread {
     /**
      * Reads the voltage on the wire and return a character according to the voltage.
      * 
-     * @param frame  Data frame to send across the network.
      */
     private char getBit()
     {
