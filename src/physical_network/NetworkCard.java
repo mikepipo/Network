@@ -37,7 +37,7 @@ public class NetworkCard extends Thread {
     private final double LOW_VOLTAGE = -2.5;
     
     // Default value for a signal pulse width that should be used in milliseconds.
-    private final int PULSE_WIDTH = 200;
+    private final int PULSE_WIDTH = 300;
     
     // Default value for maximum payload size in bytes.
     //private final int MAX_PAYLOAD_SIZE = 1500;
@@ -66,94 +66,208 @@ public class NetworkCard extends Thread {
      */
     public void send(DataFrame frame) throws InterruptedException {
     	
+    	// String object for storing binary string converted from the byte array.
+    	String binary_str = new String();
+    	
+    	// ASCII End of Transmission character (EOT), 0x04.
+    	String eot = new String("00000100");
+    	
     	for (byte b : frame.getPayload())
     	{	
     		// Convert byte type to 8 bit binary string.
-    		String binary_str = String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0');
-    		
-    		// Print out binary string (for checking).
-    		System.out.println("[*] " + binary_str);
-    		
-    		// Iterate through binary string to set the voltage high/low accordingly.
-    		for(char bit : binary_str.toCharArray())
-    		{
-    			if (bit == '1')
-    			{
-    				wire.setVoltage(deviceName, HIGH_VOLTAGE);
-    				sleep(PULSE_WIDTH);
-    			}
-    			else
-    			{
-    				wire.setVoltage(deviceName, LOW_VOLTAGE);
-    				sleep(PULSE_WIDTH);
-    			}
-    		}
-    		
+    		binary_str += String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0');
     	}
     	
-    	wire.setVoltage(deviceName, 0.0);
+    	// Print out Manchester encoded binary string.
+    	System.out.println(ManchesterEncoding(binary_str.concat(eot)));
     	
+    	// Append EOT character and send the bits across the wire.
+    	for (char bit : ManchesterEncoding(binary_str.concat(eot)).toCharArray())
+    	{
+    		sendBit(bit);
+    	}
+    	
+    	// Set voltage on the wire back to 0.0V before receiving next message.
+    	wire.setVoltage(deviceName, 0.0);
     }
     
-    public static String toHexString(byte[] array) 
+    /**
+    * Takes a character (bit) from the binary string and sets the voltage on the wire to high/low accordingly.
+    * 
+    * @param bit  A character (bit) from a binary string.
+    */
+    private void sendBit(char bit) throws InterruptedException
     {
-        return DatatypeConverter.printHexBinary(array);
+    	if (bit == '1')
+		{
+			wire.setVoltage(deviceName, HIGH_VOLTAGE);
+			sleep(PULSE_WIDTH);
+		}
+		else
+		{
+			wire.setVoltage(deviceName, LOW_VOLTAGE);
+			sleep(PULSE_WIDTH);
+		}
     }
-
-    public static byte[] toByteArray(String s) 
+    
+    /**
+     * Encode binary string using Manchester encoding.
+     * Instead of applying XOR to the signal and the clock, simply replace "01" and "10" 
+     * where you have original bits 0" and "1" respectively.
+     * 
+     * @param binary_str  Original binary string converted from the byte array.
+     */
+    private String ManchesterEncoding(String binary_str)
     {
-        return DatatypeConverter.parseHexBinary(s);
+    	String manchester = new String();
+    	
+    	for (char c : binary_str.toCharArray())
+    	{
+    		if (c == '0')
+    			manchester += "01";
+    		else
+    			manchester += "10";
+    	}
+    	
+    	return manchester;
+    }
+      
+    /**
+     * Converts a hex string to a byte array.
+     * 
+     * @param hex  Hex string
+     */
+    private static byte[] toByteArray(String hex) 
+    {
+        return DatatypeConverter.parseHexBinary(hex);
+    }
+    
+    /**
+     * Reads the voltage on the wire and return a character according to the voltage.
+     * 
+     * @param frame  Data frame to send across the network.
+     */
+    private char getBit()
+    {
+    	double voltage = wire.getVoltage(deviceName);
+    	
+    	// Signal High
+    	if (voltage < -1.0)
+    		return '0';
+    	
+    	// Signal Low
+    	if (voltage > 1.0)
+    		return '1';
+    	
+    	// Zero voltage
+    	return '2';
+    }
+    
+    /* By using Manchester encoding I will be using twice the number of bits compared to my original binary string.
+     * e.g. If I have a binary string "01" I will be sending "0110" instead. 
+     * 
+     * On the receiving end, I will be watching out for the change in voltage from high to low or vice versa because
+     * I know from the Manchester encoding that voltage change from:
+     * low to high -> bit 0 and
+     * high to low -> bit 1.
+     * 
+     * One thing to be careful of with this is that if you receive a binary pattern, for example "0101" (original binary string "00"),
+     * you do not want to include the voltage transition from high to low between the first "01" and the next "01".
+     * 
+     * Considering all possible combinations, this problem can only be seen in pattern "0101" (original: "00") and "1010" (original: "11"),
+     * i.e. in the original binary string, you are sending the same bits consecutively.
+     * 
+     * Therefore, I have written the program to notice the problem above and ignore the transition in between so myÅ@reading are correct.
+     */
+    
+    /**
+     * Returns a hex string for each byte of data received across the wire.
+     * 
+     * @throws InterruptedException
+     */
+    private void getByte() throws InterruptedException
+    {
+    	String binary = new String();
+    	
+    	boolean ignore_next_change = false;
+    	
+    	System.out.println("WAITING ...");
+    	
+    	char prev_bit = getBit();
+    	sleep(10);
+    	
+    	while (binary.length() != 8)
+    	{
+    		char next_bit = getBit();
+
+	    	if (prev_bit == '0' && next_bit == '1')
+	    	{
+	    		if (!ignore_next_change)
+	    		{
+	    			binary += '0';
+	    			
+	    			// Received a bit, so synchronize the clock.
+	    			sleep(PULSE_WIDTH * 3 / 2);
+	    			
+	    			if (getBit() == prev_bit)
+	    				ignore_next_change = true;
+	    		}
+	    		else
+	    			ignore_next_change = false;
+	    		
+	    	}
+	    	else if (prev_bit == '1' && next_bit == '0')
+	    	{
+	    		if (!ignore_next_change)
+	    		{
+	    			binary += '1';
+	    			
+	    			// Received a bit, so synchronize the clock.
+	    			sleep(PULSE_WIDTH * 3 / 2);
+	    		
+	    			if (getBit() == prev_bit)
+	    				ignore_next_change = true;
+	    		}
+	    		else
+	    			ignore_next_change = false;	
+	    	}	
+	    	
+	    	prev_bit = next_bit;
+	    	sleep(10);    		
+    	}
+    	
+    	System.out.println("RECEIVED BYTE = " + String.format("%2s", Long.toHexString(Long.parseLong(binary,2))).replace(' ', '0'));
     }
     
 	public void run() {
+		
+		boolean end_of_frame = false;
 		
 		if (listener != null) {
 			
 			System.out.println("WAITING TO RECEIVE DATA FRAMES");
 					        		
-			
-			String data = new String();
-			
 			try {
 	        	
 	        	while (true) {
-	        		
-	                int count = 0;
-	                String byte_data = new String();
 	                
-	                while (count < 8)
+	                //double voltage = wire.getVoltage(deviceName);
+	                
+	                if (Math.abs(wire.getVoltage(deviceName)) > 1.0)
 	                {
-	                	double voltage = wire.getVoltage(deviceName);                
-	                	//System.out.println(voltage);
-	                	
-		                if (voltage < -2.0)
-		                {
-		                	//System.out.println("0");
-		                	byte_data += '0';
-		                	count++;
-		                }
-		                if (voltage > 2.0)
-		                {
-		                	//System.out.println("1");
-		                	byte_data += '1';
-		                	count++;
-		                }
-		                
-		                sleep(200);
-		                
+	                	sleep(PULSE_WIDTH / 2);
 	                }
 	                
-	                data += byte_data;
+	                while (true)
+	                {
+	                	getByte();
+	                }
 	                
-	                System.out.println(Integer.toHexString(Integer.parseInt(byte_data, 2)));
-	                
-	                DataFrame recieved_dataframe = new DataFrame(toByteArray(data));
-	                
-	                listener.receive(recieved_dataframe);
-	            }
+	                }
 	        	
+	            }
 
-	        } catch (InterruptedException except) {
+	        catch (InterruptedException except) {
 	            System.out.println("Netword Card Interrupted: " + getName());
 	        }
 			
