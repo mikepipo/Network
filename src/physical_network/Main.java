@@ -41,7 +41,7 @@ public class Main {
         networkCardB.start();
 
         // Currently noise level is set to 0.0 volts on wire - but this can be increased.
-        ThermalNoise thermalNoise = new ThermalNoise("Thermal Noise", 0.0, wire);
+        ThermalNoise thermalNoise = new ThermalNoise("Thermal Noise", 3.0, wire);
         thermalNoise.start();
 
         // Set oscilloscope monitoring the wire voltage.
