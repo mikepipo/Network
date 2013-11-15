@@ -37,6 +37,7 @@ public class NetworkCard extends Thread {
     private final double LOW_VOLTAGE = -2.5;
     
     // Default value for a signal pulse width that should be used in milliseconds.
+    // MAY CHANGE THIS TO 200 ...
     private final int PULSE_WIDTH = 300;
     
     // Default value for maximum payload size in bytes.
@@ -89,6 +90,7 @@ public class NetworkCard extends Thread {
     	
     	// Set voltage on the wire back to 0.0V before receiving next message.
     	wire.setVoltage(deviceName, 0.0);
+    	sleep(PULSE_WIDTH);
     }
     
     /**

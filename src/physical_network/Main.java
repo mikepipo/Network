@@ -49,9 +49,13 @@ public class Main {
         oscilloscope.start();
 
         // Send a data frame across the link from network card A to network card B.
-        DataFrame myMessage = new DataFrame("Hello World");
+        DataFrame myMessage = new DataFrame("Hello");
         System.out.println("SENDING DATA FRAME: " + myMessage);
         networkCardA.send(myMessage);
+        
+        DataFrame myMessage2 = new DataFrame("World");
+        System.out.println("SENDING DATA FRAME: " + myMessage2);
+        networkCardA.send(myMessage2);
         
     }
 }
